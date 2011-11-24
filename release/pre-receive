@@ -1,0 +1,245 @@
+#!/bin/bash
+#
+#
+###########################################################
+## Global Management Configure
+###########################################################
+CRPREmpty_allowed=0
+DESCRIPTIONEmpty_allowed=0
+CAUSEEmpty_allowed=0
+SOLUTIONEmpty_allowed=0
+REVIEWEREmpty_allowed=0
+SIDEEFFECTEmpty_allowed=0
+
+###########################################################
+
+###########################################################
+## Definition
+###########################################################
+DIGIT="[0-9]"
+ALPHA="[a-zA-Z]"
+GRAPH=
+SPACE=" 	"
+DOMAIN="augustatek.com"
+
+###########################################################
+## Function
+###########################################################
+format_required()
+{
+cat <<EOM
+Please write your commit content against the following rules.
+[CR/PR]: xxxx [DESCRIPTION]: xxxxxxxx xxxxxx 
+[CAUSE]: xxxxxxxx
+[SOLUTION]: xxxxxxxx
+[REVIEWER]: xxx, yyy  at least two person 
+[SIDE-EFFECT]: which area needs to be rechecked. 
+
+EOM
+    return 0;
+}
+
+check_err()
+{
+    if [ $? -ne 0 ]
+    then
+        echo "--------------------------------------------"
+        echo "!!! ERR: $*"
+        #exit 101
+        format_required
+        echo "--------------------------------------------"
+        exit 1
+    #else
+        #echo "OK"
+    fi
+}
+
+###########################################################
+#Check Content Format
+#[CR/PR]: xxxx  
+#[DESCRIPTION]: xxxxxxxx xxxxxx 
+#[CAUSE]: xxxxxxxx
+#[SOLUTION]: xxxxxxxx
+#[REVIEWER]: xxx, xxx  at least two person 
+#[SIDE-EFFECT]: which area needs to be rechecked. 
+###########################################################
+# Check CR/PR
+check_CRPR()
+{
+    #echo "$FUNCNAME"
+    if [ ${CRPREmpty_allowed} -eq 0 ]
+    then
+        #git cat-file commit $1 | sed '1,/^$/d' | grep '^\[CR\]: *[0-9][0-9]*'
+        git cat-file commit $1 | sed '1,/^$/d' | grep '^\[CR\/PR\]:[ 	]*[0-9][0-9]*\|^\[CR\]:[ 	]*[0-9][0-9]*\|^\[CR\]: *xxxx\|^\[PR\]:[ 	]*[0-9][0-9]*'
+        check_err "Does not match [CR/PR] or the [CR/PR] is empty! [object]:$1"
+    else
+        git cat-file commit $1 | sed '1,/^$/d' | grep '^\[CR\/PR\]:\|^\[CR\]:\|^\[CR\]:'
+        check_err "Does not match [CR/PR]! [object]:$1"
+    fi
+    return 0
+}
+
+# Check DECRIPTION
+check_DESCRIPTION()
+{
+    #echo "$FUNCNAME"
+    if [ ${DESCRIPTIONEmpty_allowed} -eq 0 ]
+    then
+        git cat-file commit $1 | sed '1,/^$/d' | grep '^\[DESCRIPTION\]:[ 	]*[^ 	][^ 	]*'
+        check_err "Does not match [DESCRIPTION] or [DESCRIPTION] is empty! [object]:$1"
+    else
+        git cat-file commit $1 | sed '1,/^$/d' | grep '^\[DESCRIPTION\]:'
+        check_err "Does not match [DESCRIPTION]! [object]:$1"
+    fi
+    return 0
+}
+
+# Check CRPR and DESCRIPTION
+Check_CRPR_DESCRIPTION()
+{
+    #echo "$FUNCNAME"
+    if [ ${CRPREmpty_allowed} -eq 0 -a ${DESCRIPTIONEmpty_allowed} -eq 0 ]
+    then
+        #git cat-file commit $1 | sed '1,/^$/d' | grep '^\[CR\]: *[0-9][0-9]*'
+        git cat-file commit $1 | sed '1,/^$/d' | grep '^\[CR\]:[ 	]*[0-9][0-9]*[ 	]*\[DESCRIPTION\]:[ 	]*[^ 	][^ 	]*\|^\[PR\]:[ 	]*[0-9][0-9]*[ 	]*\[DESCRIPTION\]:[ 	]*[^ 	][^ 	]*'
+        check_err "Does not match [CR/PR] or [DESCRIPTION]! [object]:$1"
+    fi
+
+    if [ ${CRPREmpty_allowed} -eq 1 -a ${DESCRIPTIONEmpty_allowed} -eq 0 ]
+    then
+        git cat-file commit $1 | sed '1,/^$/d' | grep '^\[CR\]:[ 	]*[0-9]*[ 	]*\[DESCRIPTION\]:[ 	]*[^ 	][^ 	]*\|^\[PR\]:[ 	]*[0-9]*[ 	]*\[DESCRIPTION\]:[ 	]*[^ 	][^ 	]*'
+        check_err "Does not match [CR/PR] or [DESCRIPTION]! [object]:$1"
+    fi
+
+    if [ ${CRPREmpty_allowed} -eq 0 -a ${DESCRIPTIONEmpty_allowed} -eq 1 ]
+    then
+        git cat-file commit $1 | sed '1,/^$/d' | grep '^\[CR\]:[ 	]*[0-9][0-9]*[ 	]*\[DESCRIPTION\]:[ 	]*[^ 	]*\|^\[PR\]:[ 	]*[0-9][0-9]*[ 	]*\[DESCRIPTION\]:[ 	]*[^ 	]*'
+        check_err "Does not match [CR/PR] or [DESCRIPTION]! [object]:$1"
+    fi
+
+    if [ ${CRPREmpty_allowed} -eq 1 -a ${DESCRIPTIONEmpty_allowed} -eq 1 ]
+    then
+        git cat-file commit $1 | sed '1,/^$/d' | grep '^\[CR\]:[ 	]*[0-9]*[ 	]*\[DESCRIPTION\]:[ 	]*[^ 	]*\|^\[PR\]:[ 	]*[0-9]*[ 	]*\[DESCRIPTION\]:[ 	]*[^ 	]*'
+        check_err "Does not match [CR/PR] or [DESCRIPTION]! [object]:$1"
+    fi
+    return 0
+}
+
+# Check CAUSE
+check_CAUSE()
+{
+    #echo "$FUNCNAME"
+    if [ ${CAUSEEmpty_allowed} -eq 0 ]
+    then
+        git cat-file commit $1 | sed '1,/^$/d' | grep '^\[CAUSE\]:[ 	]*[^ 	][^ 	]*'
+        check_err "Does not match [CAUSE] or [CAUSE] is empty! [object]:$1"
+    else
+        git cat-file commit $1 | sed '1,/^$/d' | grep '^\[CAUSE\]:'
+        check_err "Does not match [CAUSE]! [object]:$1"
+    fi
+    return 0
+}
+
+#  Check SOLUTION
+check_SOLUTION()
+{
+    #echo "$FUNCNAME"
+    if [ ${SOLUTIONEmpty_allowed} -eq 0 ]
+    then
+        git cat-file commit $1 | sed '1,/^$/d' | grep '^\[SOLUTION\]:[ 	]*[^ 	][^ 	]*'
+        check_err "Does not match [SOLUTION] or [SOLUTION] is empty! [object]:$1"
+    else
+        git cat-file commit $1 | sed '1,/^$/d' | grep '^\[SOLUTION\]:'
+        check_err "Does not match [SOLUTION]! [object]:$1"
+    fi
+    return 0
+}
+
+# Check REVIEWER
+check_REVIEWER()
+{
+    #echo "$FUNCNAME"
+    if [ ${REVIEWEREmpty_allowed} -eq 0 ]
+    then
+        git cat-file commit $1 | sed '1,/^$/d' | grep '^\[REVIEWER\]:[ 	]*[^ 	][^	]*[ 	]*,[ 	]*[^ 	][^	]*[ 	]*'
+        check_err "Does not match [REVIEWER] or [REVIEWER] is empty! [object]:$1"
+    else
+        git cat-file commit $1 | sed '1,/^$/d' | grep '^\[REVIEWER\]:'
+        check_err "Does not match [REVIEWER]! [object]:$1"
+    fi
+    return 0
+}
+
+#  Check SIDE-EFFECT
+check_SIDEEFFECT()
+{
+    #echo "$FUNCNAME"
+    if [ ${SIDEEFFECTEmpty_allowed} -eq 0 ]
+    then
+        git cat-file commit $1 | sed '1,/^$/d' | grep '^\[SIDE-EFFECT\]:[ 	]*[^ 	][^ 	]*'
+        check_err "Does not match [SIDE-EFFECT] or [SIDE-EFFECT] is empty! [object]:$1"
+    else
+        git cat-file commit $1 | sed '1,/^$/d' | grep '^\[SIDE-EFFECT\]:'
+        check_err "Does not match [SIDE-EFFECT]! [object]:$1"
+    fi
+    return 0
+}
+
+#  Check FORMAT
+check_format()
+{
+    # echo $1 | grep '^\[CR\/PR\] *(\d\d*)\|^\[CR\] *(\d\d*)\|^\[PR\] *(\d\d*)'
+    # check_CRPR        $1
+    # check_DESCRIPTION $1
+    Check_CRPR_DESCRIPTION  $1
+    check_CAUSE             $1
+    check_SOLUTION          $1
+    check_REVIEWER          $1
+    check_SIDEEFFECT        $1
+    return 0
+}
+
+get_author_name()
+{
+    author_name=`git show -s --pretty=medium $1| grep "Author:" | awk '{print $2}'`
+}
+
+get_author_email()
+{
+    author_email=`git show -s --pretty=medium $1 | grep "Author:" | awk '{print $3}' | tr -d \< | tr -d \>`
+}
+
+###########################################################
+## Global Variable
+###########################################################
+author_name=
+author_email=
+content=
+
+while read old new name; do
+    local domain=
+    #echo "old=$old"
+    #echo "new=$new"
+    #echo "name=$name"
+    for i in $(git rev-list --reverse ${old}..${new})
+    do
+        #echo "hello $i"
+        #git show -s --pretty=medium $i
+
+        #git show -s --pretty=medium $i | grep 'git-svn-id:' > /dev/null
+        get_author_name  $i
+        get_author_email $i
+
+        #echo "ID: name:${author_name}, email:${author_email}"
+
+        #content=`git cat-file commit $i | sed '1,/^$/d'`
+        #echo "Content: ${content}"
+        domain=${author_email##*@}
+        if [ $domain = $DOMAIN ] 
+        then
+            check_format $i
+        fi
+    done
+done
+exit 0
+
