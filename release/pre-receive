@@ -201,12 +201,42 @@ check_format()
 
 get_author_name()
 {
-    author_name=`git show -s --pretty=medium $1| grep "Author:" | awk '{print $2}'`
+	#author_name=`git show -s --pretty=medium $1| grep "Author:" | awk '{print $2}'`
+	author_name=`git show -s --pretty=medium $1| grep "Author:" | sed -e "s/.*: //;s/ <.*//"`
 }
+
 
 get_author_email()
 {
-    author_email=`git show -s --pretty=medium $1 | grep "Author:" | awk '{print $3}' | tr -d \< | tr -d \>`
+	#author_email=`git show -s --pretty=medium $1 | grep "Author:" | awk '{print $3}' | tr -d \< | tr -d \>`
+	author_email=`git show -s --pretty=medium $1 | grep "Author:" | grep -Eiorh "[A-Z0-9._%-]+@[A-Z0-9.-]+\.[A-Z]{2,4}"`
+}
+
+get_commit_detail()
+{
+	commit_detail=`git show -s --pretty=medium $1`
+	#commit_head=$(echo $commit_detail | sed '1,/^$/!d')
+	commit_head=$commit_detail
+	author_name=`echo $commit_head | grep "Author:" | sed -e "s/.*Author: //;s/ <.*//"`
+	author_email=`echo $commit_head | grep "Author:" | grep -Eiorh "[A-Z0-9._%-]+@[A-Z0-9.-]+\.[A-Z]{2,4}"`
+	#commit_content=$(echo $commit_detail | sed '1,/^$/d')
+	commit_content=$commit_detail
+	echo $commit_content | grep -Eiorh '\[CR\]' > /dev/null
+	if [ $? -eq 0 ]; then
+		commit_type=CR
+		cr_num=$(echo $commit_content | sed -e "s/.*\[CR\]://;s/\[DESCRIPTION\]:.*//")
+	        cr_num=$(echo $cr_num | sed -e "s/ //")
+		cr_pr_num=$cr_num
+	else
+	        echo $commit_content | grep -Eiorh '\[PR\]' > /dev/null
+	        if [ $? -eq 0 ]; then
+	                commit_type=PR
+			pr_num=$(echo $commit_content | sed -e "s/.*\[PR\]://;s/\[DESCRIPTION\]:.*//")
+			pr_num=$(echo $pr_num | sed -e "s/ //")
+			cr_pr_num=$pr_num
+		fi
+	fi
+
 }
 
 ###########################################################
@@ -214,30 +244,47 @@ get_author_email()
 ###########################################################
 author_name=
 author_email=
+branch_name=
+cr_num=
+pr_num=
+cr_pr_num=
+commit_type=
 content=
 
 while read old new name; do
-    local domain=
+    #local domain=
     #echo "old=$old"
     #echo "new=$new"
     #echo "name=$name"
+    branch_name=$(echo $name | sed 's:refs/heads/::')
+    #echo $branch_name
     for i in $(git rev-list --reverse ${old}..${new})
     do
         #echo "hello $i"
         #git show -s --pretty=medium $i
 
         #git show -s --pretty=medium $i | grep 'git-svn-id:' > /dev/null
-        get_author_name  $i
-        get_author_email $i
-
-        #echo "ID: name:${author_name}, email:${author_email}"
+        #get_author_name  $i
+        #get_author_email $i
+	get_commit_detail $i
+        #echo "commit author name:${author_name}, email:${author_email}, type:$commit_type, PR:$pr_num or CR:$cr_num"
 
         #content=`git cat-file commit $i | sed '1,/^$/d'`
         #echo "Content: ${content}"
         domain=${author_email##*@}
-        if [ $domain = $DOMAIN ] 
-        then
+        if [ "$domain" = "$DOMAIN" ]; then
             check_format $i
+	    
+	    base_dir=$(dirname $0)
+	    #echo $base_dir
+	    #echo "$base_dir/${branch_name}_branch_req_pr_list"
+	    if [ -f $base_dir/${branch_name}_branch_req_pr_list ]; then
+		    cat $base_dir/${branch_name}_branch_req_pr_list | grep ",$cr_pr_num," > /dev/null
+		    if [ ! $? -eq 0 ]; then
+			    echo "*** COMMIT FORBIDDEN: $commit_type number $cr_pr_num is not on $branch_name branch allow list"
+			    exit 1
+		    fi
+	    fi
         fi
     done
 done
