@@ -21,6 +21,7 @@ ALPHA="[a-zA-Z]"
 GRAPH=
 SPACE=" 	"
 DOMAIN="augustatek.com"
+CN_DOMAIN="augustatek.com.cn"
 
 ###########################################################
 ## Function
@@ -272,7 +273,7 @@ while read old new name; do
         #content=`git cat-file commit $i | sed '1,/^$/d'`
         #echo "Content: ${content}"
         domain=${author_email##*@}
-        if [ "$domain" = "$DOMAIN" ]; then
+	if [ "$domain" = "$DOMAIN" ] || [ "$domain" = "$CN_DOMAIN" ]; then
             check_format $i
 	    
 	    base_dir=$(dirname $0)
