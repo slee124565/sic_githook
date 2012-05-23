@@ -253,45 +253,47 @@ commit_type=
 content=
 
 while read old new name; do
-    #local domain=
-    #echo "old=$old"
-    #echo "new=$new"
-    #echo "name=$name"
-    branch_name=$(echo $name | sed 's:refs/heads/::')
-    #echo $branch_name
-    for i in $(git rev-list --reverse ${old}..${new})
-    do
-        #echo "hello $i"
-        #git show -s --pretty=medium $i
-
-        #git show -s --pretty=medium $i | grep 'git-svn-id:' > /dev/null
-        #get_author_name  $i
-        #get_author_email $i
-	get_commit_detail $i
-        #echo "commit author name:${author_name}, email:${author_email}, type:$commit_type, PR:$pr_num or CR:$cr_num"
-
-        #content=`git cat-file commit $i | sed '1,/^$/d'`
-        #echo "Content: ${content}"
-        domain=${author_email##*@}
-	if [ "$domain" = "$DOMAIN" ] || [ "$domain" = "$CN_DOMAIN" ]; then
-            check_format $i
-	    
-	    base_dir=$(dirname $0)
-	    #echo $base_dir
-	    #echo "$base_dir/${branch_name}_branch_req_pr_list"
-	    #if [ -f $base_dir/${branch_name}_branch_req_pr_list ]; then
-	    if [ -f $base_dir/branch_req_pr_list ]; then
-		cat $base_dir/branch_req_pr_list | grep "%$branch_name%" > /dev/null
-		if [ $? -eq 0 ]; then
-		    	cat $base_dir/branch_req_pr_list | grep %$branch_name% | grep ",$cr_pr_num," > /dev/null
-		    	if [ ! $? -eq 0 ]; then
-				echo "*** COMMIT FORBIDDEN: $commit_type number $cr_pr_num is not on $branch_name branch allow list"
-			    	exit 1
-		    	fi
+	#local domain=
+	#echo "old=$old"
+	#echo "new=$new"
+	#echo "name=$name"
+	branch_name=$(echo $name | sed 's:refs/heads/::')
+	#echo $branch_name
+	for i in $(git rev-list --reverse ${old}..${new})
+	do
+		#echo "hello $i"
+		#git show -s --pretty=medium $i
+		
+		#git show -s --pretty=medium $i | grep 'git-svn-id:' > /dev/null
+		#get_author_name  $i
+		#get_author_email $i
+		get_commit_detail $i
+		#echo "commit author name:${author_name}, email:${author_email}, type:$commit_type, PR:$pr_num or CR:$cr_num"
+		
+		#content=`git cat-file commit $i | sed '1,/^$/d'`
+		#echo "Content: ${content}"
+		domain=${author_email##*@}
+		#if [ "$domain" = "$DOMAIN" ] || [ "$domain" = "$CN_DOMAIN" ]; then
+		if `echo ${domain} | grep "${DOMAIN}" 1>/dev/null 2>&1` 
+		then
+		    check_format $i
 		fi
-	    fi
-        fi
-    done
+
+		base_dir=$(dirname $0)
+		#echo $base_dir
+		#echo "$base_dir/${branch_name}_branch_req_pr_list"
+		if [ -f $base_dir/branch_req_pr_list ]; then
+			cat $base_dir/branch_req_pr_list | grep "%$branch_name%" > /dev/null
+			if [ $? -eq 0 ]; then
+			    check_format $i
+				cat $base_dir/branch_req_pr_list | grep %$branch_name% | grep ",$cr_pr_num," > /dev/null
+				if [ ! $? -eq 0 ]; then
+					echo "*** COMMIT FORBIDDEN: $commit_type number $cr_pr_num is not on $branch_name branch allow list"
+					exit 1
+				fi
+			fi
+		fi
+	done
 done
 exit 0
 
