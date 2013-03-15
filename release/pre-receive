@@ -126,6 +126,22 @@ Check_CRPR_DESCRIPTION()
     return 0
 }
 
+# Check Value for N/A or None
+check_value()
+{
+	field_name=$1
+	commit_id=$2
+	f_value=`git cat-file commit $commit_id | sed '1,/^$/d' | grep "^\[$field_name\]:[    ]*[^    ][^     ]*" | sed -e "s/.*\[$field_name\]://" `
+	f_value=`echo $f_value | sed -e "s/ //" | tr '[:upper:]' '[:lower:]'`
+	if [ "$f_value" = "" ] || [ "$f_value" = "n/a" ] || [ "$f_value" = "none" ]; then
+        echo "*** COMMIT FORBIDDEN: [$field_name] should not be empty or N/A or none! [object]:$commit_id"
+        exit 1
+
+	else
+		return 0
+	fi
+}
+
 # Check CAUSE
 check_CAUSE()
 {
@@ -133,7 +149,8 @@ check_CAUSE()
     if [ ${CAUSEEmpty_allowed} -eq 0 ]
     then
         git cat-file commit $1 | sed '1,/^$/d' | grep '^\[CAUSE\]:[ 	]*[^ 	][^ 	]*'
-        check_err "Does not match [CAUSE] or [CAUSE] is empty! [object]:$1"
+		check_err "Does not match [CAUSE] or [CAUSE] is empty! [object]:$1"
+		check_value "CAUSE" $1
     else
         git cat-file commit $1 | sed '1,/^$/d' | grep '^\[CAUSE\]:'
         check_err "Does not match [CAUSE]! [object]:$1"
@@ -149,6 +166,7 @@ check_SOLUTION()
     then
         git cat-file commit $1 | sed '1,/^$/d' | grep '^\[SOLUTION\]:[ 	]*[^ 	][^ 	]*'
         check_err "Does not match [SOLUTION] or [SOLUTION] is empty! [object]:$1"
+		check_value "SOLUTION" $1
     else
         git cat-file commit $1 | sed '1,/^$/d' | grep '^\[SOLUTION\]:'
         check_err "Does not match [SOLUTION]! [object]:$1"
@@ -259,6 +277,14 @@ while read old new name; do
 	#echo "name=$name"
 	branch_name=$(echo $name | sed 's:refs/heads/::')
 	#echo $branch_name
+	#if [ $(git rev-parse --is-bare-repository) = true ]
+	#then
+	#	REPOSITORY_BASENAME=$(basename "$PWD") 
+	#else
+	#	REPOSITORY_BASENAME=$(basename $(readlink -nf "$PWD"/..))	
+	#fi
+	#echo REPOSITORY_BASENAME is $REPOSITORY_BASENAME
+
 	for i in $(git rev-list --reverse ${old}..${new})
 	do
 		#echo "hello $i"
