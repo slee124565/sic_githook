@@ -21,6 +21,7 @@ ALPHA="[a-zA-Z]"
 GRAPH=
 SPACE=" 	"
 DOMAIN="augustatek.com"
+DOMAIN2="smartic.com"
 CN_DOMAIN="augustatek.com.cn"
 
 ###########################################################
@@ -304,6 +305,10 @@ while read old new name; do
 		then
 		    check_format $i
 		fi
+        if `echo ${domain} | grep "${DOMAIN2}" 1>/dev/null 2>&1`
+        then
+            check_format $i
+        fi
 
 		base_dir=$(dirname $0)
 		#echo $base_dir
